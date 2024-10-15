@@ -1,14 +1,17 @@
 package com.articulos.crud_articulos.controller;
 
 import com.articulos.crud_articulos.dto.ApiResponse;
+import com.articulos.crud_articulos.dto.ApiResponseWithData;
 import com.articulos.crud_articulos.model.Articulo;
 import com.articulos.crud_articulos.repository.ArticuloRepository;
 import com.articulos.crud_articulos.exception.ResourceNotFoundException;
+import com.articulos.crud_articulos.service.ArticuloService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -17,26 +20,38 @@ import java.util.Optional;
 public class ArticuloController {
 
     @Autowired
-    private ArticuloRepository articuloRepository;
+    private ArticuloService articuloService;
+
+    @Autowired
+    private ArticuloRepository articuloRepository; // Inyectar ArticuloRepository
 
     // Obtener todos los artículos
     @GetMapping
-    public ResponseEntity<ApiResponse> listarArticulos() {
-        return ResponseEntity.ok(new ApiResponse(true, "Lista de artículos obtenida exitosamente"));
+    public ResponseEntity<List<Articulo>> listarArticulos() {
+        List<Articulo> articulos = articuloService.obtenerTodosLosArticulos();
+        return ResponseEntity.ok(articulos);
     }
 
-    // Endpoint para obtener un artículo por ID
+
+    //articulo por id
     @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse> obtenerArticuloPorId(@PathVariable Long id) {
-        Optional<Articulo> articulo = articuloRepository.findById(id);
+    public ResponseEntity<Object> obtenerArticuloPorId(@PathVariable Long id) {
+        Optional<Articulo> articulo = articuloService.obtenerArticuloPorId(id);
 
         if (articulo.isPresent()) {
-            return ResponseEntity.ok(new ApiResponse(true, "Artículo encontrado"));
+            // Devuelve el artículo encontrado como JSON
+            return ResponseEntity.ok(articulo.get());
         } else {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ApiResponse(false, "Artículo no encontrado con id: " + id));
+            // Devuelve un 404 Not Found con un mensaje de error
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("message", "Artículo no encontrado con id: " + id));
         }
     }
 
+
+
+
+    // Crear un nuevo artículo
     @PostMapping
     public ResponseEntity<ApiResponse> crearArticulo(@RequestBody Articulo articulo) {
         if (articulo.getPrecioProducto() == null) {
@@ -46,7 +61,8 @@ public class ArticuloController {
         }
 
         articuloRepository.save(articulo);
-        return ResponseEntity.status(HttpStatus.CREATED).body(new ApiResponse(true, "Artículo creado exitosamente"));
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(new ApiResponse(true, "Artículo creado exitosamente"));
     }
 
     // Actualizar un artículo existente (PUT)
@@ -93,7 +109,6 @@ public class ArticuloController {
         articuloRepository.save(articulo);
         return ResponseEntity.ok(new ApiResponse(true, "Artículo actualizado con éxito"));
     }
-
 
     // Eliminar un artículo
     @DeleteMapping("/{id}")
